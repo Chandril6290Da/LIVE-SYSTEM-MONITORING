@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b1020" />
+  <title>PulseOps — MLOps Observability</title>
+  <meta name="description" content="MLOps telemetry and model-serving observability dashboard." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root {
+      color-scheme: dark;
+      --page: #0b1020;
+      --rail: #0e1528;
+      --panel: #111a2f;
+      --panel-2: #151f36;
+      --line: #26324b;
+      --text: #edf3ff;
+      --muted: #8d9ab5;
+      --faint: #61708d;
+      --brand: #8b7cff;
+      --brand-soft: rgba(139, 124, 255, .14);
+      --cyan: #52d9ed;
+      --green: #48d6a0;
+      --amber: #ffbf69;
+      --red: #ff7388;
+      --radius: 18px;
+      --shadow: 0 18px 55px rgba(0, 0, 0, .16);
+      --font: 'Manrope', system-ui, sans-serif;
+      --mono: 'DM Mono', monospace;
+    }
+    :root[data-theme="light"] {
+      color-scheme:light; --page:#f3f5fa; --rail:#fff; --panel:#fff; --panel-2:#f7f8fc;
+      --line:#e2e7f0; --text:#18223a; --muted:#64718b; --faint:#8a95a9;
+      --brand:#6656e8; --brand-soft:rgba(102,86,232,.10); --cyan:#087f9a;
+      --green:#138b64; --amber:#9b5b00; --red:#c83e5b; --shadow:0 16px 40px rgba(28,42,75,.06);
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--page);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.55;min-height:100vh}
+    button,a{font:inherit} button{cursor:pointer}
+    a{color:inherit;text-decoration:none}
+    button:focus-visible,a:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
+    .app-shell{min-height:100vh;display:grid;grid-template-columns:238px minmax(0,1fr)}
+    .rail{background:var(--rail);border-right:1px solid var(--line);padding:25px 16px;display:flex;flex-direction:column;gap:32px}
+    .brand{display:flex;align-items:center;gap:11px;padding:0 10px}
+    .brand-mark{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:linear-gradient(145deg,var(--brand),#54d7e7);color:#fff;font-size:17px;box-shadow:0 8px 24px rgba(139,124,255,.22)}
+    .brand-name{font-size:15px;font-weight:800;letter-spacing:.02em}.brand-name small{display:block;font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.14em;text-transform:uppercase}
+    .nav-label{padding:0 12px;color:var(--faint);font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px}
+    .nav-list{display:grid;gap:5px}
+    .nav-link{display:flex;align-items:center;gap:12px;padding:11px 13px;color:var(--muted);border-radius:11px;font-weight:700;font-size:12px;transition:background .2s,color .2s}
+    .nav-link i{width:17px;text-align:center;font-size:14px}
+    .nav-link.active{color:var(--text);background:var(--brand-soft);box-shadow:inset 3px 0 var(--brand)}
+    .nav-link:hover{background:var(--panel-2);color:var(--text)}
+    .rail-bottom{margin-top:auto}.cluster-card{border:1px solid var(--line);border-radius:15px;padding:14px;background:var(--panel)}
+    .cluster-top{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:800}
+    .online-dot{width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;box-shadow:0 0 0 4px rgba(72,214,160,.12);margin-right:7px}
+    .cluster-card p{color:var(--muted);font-size:11px;margin:8px 0 12px}
+    .cluster-foot{display:flex;justify-content:space-between;font:10px var(--mono);color:var(--faint)}
+    .main-area{min-width:0}
+    .topbar{height:78px;padding:0 clamp(18px,3vw,42px);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:20px;background:var(--page)}
+    .crumb{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px}.crumb strong{color:var(--text)}
+    .top-actions{display:flex;align-items:center;gap:10px}
+    .icon-btn,.range-btn{border:1px solid var(--line);background:var(--panel);color:var(--text);height:38px;border-radius:10px;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+    .icon-btn{width:38px;padding:0}.range-btn{font-size:11px;font-weight:800}
+    .avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--brand-soft);color:var(--brand);font-size:11px;font-weight:800;border:1px solid var(--line)}
+    .content{padding:clamp(20px,3vw,42px);max-width:1600px;margin:auto}
+    .page-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:22px;margin-bottom:28px}
+    .eyebrow{display:flex;align-items:center;gap:9px;color:var(--cyan);font-size:10px;font-weight:800;letter-spacing:.17em;text-transform:uppercase;margin-bottom:12px}
+    .eyebrow:before{content:"";height:1px;width:24px;background:currentColor}
+    h1{font-size:clamp(25px,3vw,36px);letter-spacing:-.055em;line-height:1.15;margin:0;font-weight:800}
+    .subtitle{margin:11px 0 0;color:var(--muted);max-width:650px;font-size:12px}
+    .heading-actions{display:flex;gap:9px;flex-wrap:wrap}
+    .btn-primary{border:0;background:var(--brand);color:#fff;border-radius:10px;padding:11px 15px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:8px;box-shadow:0 8px 22px rgba(139,124,255,.2)}
+    .btn-secondary{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:10px;padding:10px 13px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:8px}
+    .section-title{font-size:12px;font-weight:800;letter-spacing:-.01em;margin:0}.section-meta{color:var(--muted);font-size:10px}
+    .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+    .metric{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:19px;min-width:0;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+    .metric:after{content:"";position:absolute;width:100px;height:100px;border-radius:50%;right:-45px;top:-48px;background:var(--metric-glow,var(--brand-soft));filter:blur(2px)}
+    .metric-head{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--muted);font-size:11px;font-weight:700}
+    .metric-icon{width:31px;height:31px;border-radius:10px;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center}
+    .metric-value{font-size:clamp(25px,2.4vw,32px);font-weight:800;letter-spacing:-.06em;margin:14px 0 5px;line-height:1.15}
+    .metric-foot{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:10px}
+    .trend{font:10px var(--mono);color:var(--green)}.trend.warn{color:var(--amber)}
+    .mini-track{height:4px;background:var(--line);border-radius:10px;overflow:hidden;margin-top:15px}
+    .mini-fill{height:100%;width:42%;border-radius:10px;background:var(--fill,var(--brand));transition:width .5s ease}
+    .workspace-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(280px,.85fr);gap:16px;margin-bottom:16px}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:21px;min-width:0;box-shadow:var(--shadow)}
+    .panel-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
+    .panel-heading p{margin:5px 0 0;color:var(--muted);font-size:10px}
+    .live-pill{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(72,214,160,.25);background:rgba(72,214,160,.08);color:var(--green);border-radius:30px;padding:6px 9px;font:9px var(--mono);white-space:nowrap}
+    .chart-wrap{height:200px;position:relative;overflow:hidden;border-bottom:1px solid var(--line);background:repeating-linear-gradient(to bottom,transparent 0,transparent 48px,var(--line) 49px,var(--line) 50px)}
+    .chart-wrap svg{width:100%;height:100%;overflow:visible}
+    .chart-line{fill:none;stroke:var(--brand);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+    .chart-area{fill:url(#areaFill)}
+    .chart-line-cyan{fill:none;stroke:var(--cyan);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+    .chart-labels{display:flex;justify-content:space-between;color:var(--faint);font:9px var(--mono);padding-top:10px}
+    .legend{display:flex;gap:16px;align-items:center;color:var(--muted);font-size:10px}.legend span{display:flex;align-items:center;gap:6px}.legend i{width:7px;height:7px;border-radius:50%;display:inline-block}
+    .service-list{display:grid;gap:0}
+    .service{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:11px;padding:13px 0;border-bottom:1px solid var(--line)}
+    .service:last-child{border-bottom:0;padding-bottom:0}
+    .service-icon{width:34px;height:34px;border-radius:10px;background:var(--panel-2);border:1px solid var(--line);display:grid;place-items:center;color:var(--cyan)}
+    .service-name{font-size:11px;font-weight:800}.service-sub{font-size:10px;color:var(--muted);margin-top:3px}
+    .service-status{font:9px var(--mono);color:var(--green);display:flex;align-items:center;gap:5px}.service-status:before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+    .bottom-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(280px,.7fr);gap:16px}
+    .table-wrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;min-width:490px;text-align:left}
+    th{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:800;padding:0 12px 12px}
+    td{border-top:1px solid var(--line);padding:13px 12px;font-size:10px;color:var(--muted);white-space:nowrap}
+    td:first-child{color:var(--text);font-weight:700}
+    .endpoint{font-family:var(--mono);font-size:10px}
+    .status-tag{border-radius:6px;padding:4px 7px;background:rgba(72,214,160,.1);color:var(--green);font:9px var(--mono)}
+    .status-tag.warn{background:rgba(255,191,105,.12);color:var(--amber)}
+    .stream-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px}
+    .stream-tools{display:flex;align-items:center;gap:8px}
+    .stream-tools button{border:0;background:transparent;color:var(--muted);padding:4px;font-size:11px}
+    .live-stream-box{max-height:238px;overflow:auto;display:grid;gap:8px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+    .stream-log{font:10px/1.6 var(--mono);color:var(--muted);padding:10px 11px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);overflow-wrap:anywhere}
+    .timestamp{color:var(--faint);margin-right:6px}.status-ok{color:var(--green)}.status-warn{color:var(--amber)}
+    .footer-note{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--faint);font-size:9px;padding:24px 2px 4px}
+    .toast{position:fixed;right:22px;bottom:22px;background:var(--panel-2);border:1px solid var(--line);padding:12px 15px;border-radius:12px;box-shadow:var(--shadow);font-size:11px;z-index:20;display:none}
+    @media(max-width:1100px){.app-shell{grid-template-columns:76px minmax(0,1fr)}.rail{padding:23px 10px}.brand{justify-content:center;padding:0}.brand-name,.nav-label,.nav-link span,.cluster-card{display:none}.nav-link{justify-content:center;padding:13px 8px}.nav-link i{font-size:16px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:760px){.app-shell{display:block}.rail{display:none}.topbar{height:64px;padding:0 18px}.content{padding:23px 16px}.page-heading{display:block}.heading-actions{margin-top:18px}.workspace-grid,.bottom-grid{grid-template-columns:1fr}.panel{padding:17px}.metrics{gap:10px}.metric{padding:15px}.metric-value{font-size:27px}.crumb{font-size:11px}.range-btn span{display:none}}
+    @media(max-width:420px){.metrics{grid-template-columns:1fr 1fr}.metric{padding:12px}.metric-head{font-size:10px}.metric-icon{width:27px;height:27px}.metric-value{font-size:24px}.metric-foot{font-size:9px}.top-actions{gap:6px}.page-heading h1{font-size:26px}.heading-actions .btn-secondary,.heading-actions .btn-primary{padding:10px;font-size:10px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="rail" aria-label="Primary navigation">
+    <a class="brand" href="#overview" aria-label="PulseOps home">
+      <span class="brand-mark"><i class="fa-solid fa-wave-square"></i></span>
+      <span class="brand-name">pulseops<small>model observability</small></span>
+    </a>
+    <div>
+      <div class="nav-label">Workspace</div>
+      <nav class="nav-list">
+        <a class="nav-link active" href="#overview"><i class="fa-solid fa-chart-pie"></i><span>Overview</span></a>
+        <a class="nav-link" href="#telemetry"><i class="fa-solid fa-chart-line"></i><span>Telemetry</span></a>
+        <a class="nav-link" href="#endpoints"><i class="fa-solid fa-cubes"></i><span>Model endpoints</span></a>
+        <a class="nav-link" href="#events"><i class="fa-solid fa-terminal"></i><span>Event stream</span></a>
+      </nav>
+    </div>
+    <div>
+      <div class="nav-label">System</div>
+      <nav class="nav-list">
+        <a class="nav-link" href="#cluster"><i class="fa-solid fa-server"></i><span>Cluster health</span></a>
+        <a class="nav-link" href="#events"><i class="fa-solid fa-bell"></i><span>Alerts <span style="color:var(--amber)">· 1</span></span></a>
+      </nav>
+    </div>
+    <div class="rail-bottom">
+      <div class="cluster-card" id="cluster">
+        <div class="cluster-top"><span>Production cluster</span><span class="online-dot"></span></div>
+        <p>All core services are reporting healthy telemetry.</p>
+        <div class="cluster-foot"><span>US-CENTRAL-1</span><span>v2.8.4</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-area" id="overview">
+    <header class="topbar">
+      <div class="crumb"><span>Workspace</span><i class="fa-solid fa-chevron-right" style="font-size:9px"></i><strong>Observability</strong></div>
+      <div class="top-actions">
+        <button class="range-btn" id="refreshBtn" type="button"><i class="fa-solid fa-rotate"></i><span>Refresh data</span></button>
+        <button class="icon-btn" id="themeToggleBtn" type="button" title="Toggle theme" aria-label="Toggle theme"><i class="fa-solid fa-sun"></i></button>
+        <div class="avatar" title="Workspace owner">CG</div>
+      </div>
+    </header>
+
+    <div class="content">
+      <section class="page-heading">
+        <div>
+          <div class="eyebrow">MLOps / live environment</div>
+          <h1>Model operations,<br>in clear view.</h1>
+          <p class="subtitle">A live operational snapshot of model-serving infrastructure, inference latency, and data quality signals.</p>
+        </div>
+        <div class="heading-actions">
+          <button class="btn-secondary" id="exportBtn" type="button"><i class="fa-solid fa-download"></i> Export snapshot</button>
+          <button class="btn-primary" id="triggerBurstBtn" type="button"><i class="fa-solid fa-bolt"></i> Simulate traffic spike</button>
+        </div>
+      </section>
+
+      <section class="metrics" aria-label="Key performance indicators">
+        <article class="metric" style="--metric-glow:rgba(139,124,255,.18);--fill:var(--brand)">
+          <div class="metric-head"><span>GPU utilization</span><span class="metric-icon"><i class="fa-solid fa-microchip"></i></span></div>
+          <div class="metric-value" id="monGpuVal">42%</div>
+          <div class="metric-foot"><span class="trend">↗ 4.8%</span><span>vs previous window</span></div>
+          <div class="mini-track"><div class="mini-fill" id="monGpuBar" style="width:42%"></div></div>
+        </article>
+        <article class="metric" style="--metric-glow:rgba(82,217,237,.15);--fill:var(--cyan)">
+          <div class="metric-head"><span>CPU core load</span><span class="metric-icon" style="color:var(--cyan);background:rgba(82,217,237,.1)"><i class="fa-solid fa-server"></i></span></div>
+          <div class="metric-value" id="monCpuVal">28%</div>
+          <div class="metric-foot"><span class="trend">↘ 2.1%</span><span>4 vCPU instances</span></div>
+          <div class="mini-track"><div class="mini-fill" id="monCpuBar" style="width:28%;--fill:var(--cyan)"></div></div>
+        </article>
+        <article class="metric" style="--metric-glow:rgba(255,191,105,.15);--fill:var(--amber)">
+          <div class="metric-head"><span>Inference latency</span><span class="metric-icon" style="color:var(--amber);background:rgba(255,191,105,.1)"><i class="fa-solid fa-stopwatch"></i></span></div>
+          <div class="metric-value" id="monLatVal">18 ms</div>
+          <div class="metric-foot"><span class="trend">Within SLA</span><span>target under 100 ms</span></div>
+          <div class="mini-track"><div class="mini-fill" id="monLatBar" style="width:20%;--fill:var(--amber)"></div></div>
+        </article>
+        <article class="metric" style="--metric-glow:rgba(72,214,160,.13);--fill:var(--green)">
+          <div class="metric-head"><span>Data drift · KS</span><span class="metric-icon" style="color:var(--green);background:rgba(72,214,160,.1)"><i class="fa-solid fa-shield-halved"></i></span></div>
+          <div class="metric-value" id="monDriftVal">0.014</div>
+          <div class="metric-foot"><span class="trend">Stable</span><span>No drift detected</span></div>
+          <div class="mini-track"><div class="mini-fill" id="monDriftBar" style="width:14%;--fill:var(--green)"></div></div>
+        </article>
+      </section>
+
+      <section class="workspace-grid" id="telemetry">
+        <article class="panel">
+          <div class="panel-heading">
+            <div><h2 class="section-title">Resource telemetry</h2><p>Utilization trend · rolling 60 minutes</p></div>
+            <span class="live-pill"><span class="online-dot" style="margin:0"></span> LIVE</span>
+          </div>
+          <div class="legend" style="margin-bottom:15px"><span><i style="background:var(--brand)"></i>GPU load</span><span><i style="background:var(--cyan)"></i>CPU load</span></div>
+          <div class="chart-wrap" role="img" aria-label="Illustrative GPU and CPU utilization trend chart">
+            <svg viewBox="0 0 700 200" preserveAspectRatio="none" aria-hidden="true">
+              <defs><linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8b7cff" stop-opacity=".28"/><stop offset="100%" stop-color="#8b7cff" stop-opacity="0"/></linearGradient></defs>
+              <path class="chart-area" d="M0 124 L50 113 L100 130 L150 91 L200 105 L250 72 L300 88 L350 58 L400 82 L450 52 L500 67 L550 42 L600 57 L650 32 L700 44 L700 200 L0 200 Z"/>
+              <path class="chart-line" d="M0 124 L50 113 L100 130 L150 91 L200 105 L250 72 L300 88 L350 58 L400 82 L450 52 L500 67 L550 42 L600 57 L650 32 L700 44"/>
+              <path class="chart-line-cyan" d="M0 155 L50 145 L100 151 L150 132 L200 142 L250 126 L300 137 L350 112 L400 125 L450 111 L500 120 L550 98 L600 111 L650 92 L700 104"/>
+            </svg>
+          </div>
+          <div class="chart-labels"><span>-60 min</span><span>-45 min</span><span>-30 min</span><span>-15 min</span><span>Now</span></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading"><div><h2 class="section-title">Service health</h2><p>Core inference components</p></div><span class="section-meta">4 services</span></div>
+          <div class="service-list">
+            <div class="service"><div class="service-icon"><i class="fa-solid fa-brain"></i></div><div><div class="service-name">Text classifier</div><div class="service-sub">v1.8.2 · 2 replicas</div></div><span class="service-status">Healthy</span></div>
+            <div class="service"><div class="service-icon"><i class="fa-solid fa-route"></i></div><div><div class="service-name">Pathfinder</div><div class="service-sub">v2.1.0 · 3 replicas</div></div><span class="service-status">Healthy</span></div>
+            <div class="service"><div class="service-icon"><i class="fa-solid fa-magnifying-glass-chart"></i></div><div><div class="service-name">RAG retriever</div><div class="service-sub">v1.4.6 · 2 replicas</div></div><span class="service-status">Healthy</span></div>
+            <div class="service"><div class="service-icon"><i class="fa-solid fa-network-wired"></i></div><div><div class="service-name">Neural network</div><div class="service-sub">v3.0.1 · 4 replicas</div></div><span class="service-status">Healthy</span></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="bottom-grid">
+        <article class="panel" id="endpoints">
+          <div class="panel-heading"><div><h2 class="section-title">Model endpoints</h2><p>Latest endpoint response samples</p></div><span class="section-meta">Last 5 requests</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Endpoint</th><th>Method</th><th>Latency</th><th>Status</th></tr></thead>
+              <tbody id="endpointRows">
+                <tr><td class="endpoint">text-classifier:predict</td><td>POST</td><td>16.4 ms</td><td><span class="status-tag">200 OK</span></td></tr>
+                <tr><td class="endpoint">pathfinder:evaluate</td><td>POST</td><td>19.1 ms</td><td><span class="status-tag">200 OK</span></td></tr>
+                <tr><td class="endpoint">rag-retriever:query</td><td>POST</td><td>22.8 ms</td><td><span class="status-tag">200 OK</span></td></tr>
+                <tr><td class="endpoint">neural-net:forward</td><td>POST</td><td>17.6 ms</td><td><span class="status-tag">200 OK</span></td></tr>
+                <tr><td class="endpoint">text-classifier:predict</td><td>POST</td><td>18.2 ms</td><td><span class="status-tag">200 OK</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel" id="events">
+          <div class="stream-head"><div><h2 class="section-title">Inference event stream</h2><div class="section-meta" style="margin-top:5px">Recent model-serving events</div></div><div class="stream-tools"><span class="live-pill">STREAMING</span><button id="clearLogsBtn" type="button" title="Clear event stream" aria-label="Clear event stream"><i class="fa-solid fa-trash-can"></i></button></div></div>
+          <div class="live-stream-box" id="inferenceStreamLogs" aria-live="polite">
+            <div class="stream-log"><span class="timestamp">[12:30:14]</span> <span class="status-ok">POST /v1/models/text-classifier:predict</span> · 200 OK · 16.4ms</div>
+            <div class="stream-log"><span class="timestamp">[12:30:17]</span> <span class="status-ok">POST /v1/models/pathfinder:evaluate</span> · 200 OK · 19.1ms</div>
+            <div class="stream-log"><span class="timestamp">[12:30:21]</span> <span class="status-ok">POST /v1/models/rag-retriever:query</span> · 200 OK · 22.8ms</div>
+          </div>
+        </article>
+      </section>
+      <footer class="footer-note"><span>PulseOps Observability · Demo telemetry simulator</span><span>Environment: production-like · <span id="lastUpdated">Updated just now</span></span></footer>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+  const $ = id => document.getElementById(id);
+  const themeToggleBtn = $('themeToggleBtn');
+  let currentTheme = localStorage.getItem('pulseops-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  updateThemeIcon();
+  themeToggleBtn.addEventListener('click', () => {
+    currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    localStorage.setItem('pulseops-theme', currentTheme);
+    updateThemeIcon();
+  });
+  function updateThemeIcon() {
+    themeToggleBtn.innerHTML = currentTheme === 'light' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
+    themeToggleBtn.setAttribute('aria-label', currentTheme === 'light' ? 'Switch to dark theme' : 'Switch to light theme');
+  }
+
+  const monGpuVal = $('monGpuVal'), monGpuBar = $('monGpuBar');
+  const monCpuVal = $('monCpuVal'), monCpuBar = $('monCpuBar');
+  const monLatVal = $('monLatVal'), monLatBar = $('monLatBar');
+  const monDriftVal = $('monDriftVal'), monDriftBar = $('monDriftBar');
+  const streamLogs = $('inferenceStreamLogs');
+  const endpoints = [
+    '/v1/models/text-classifier:predict',
+    '/v1/models/pathfinder:evaluate',
+    '/v1/models/rag-retriever:query',
+    '/v1/models/neural-net:forward'
+  ];
+  let latest = {gpu:42,cpu:28,latency:18,drift:'0.014'};
+  function addLog(message, status='ok', latency=null) {
+    const log = document.createElement('div');
+    log.className = 'stream-log';
+    const time = new Date().toTimeString().split(' ')[0];
+    const timestamp = document.createElement('span');
+    timestamp.className = 'timestamp'; timestamp.textContent = `[${time}] `;
+    const statusSpan = document.createElement('span');
+    statusSpan.className = status === 'warn' ? 'status-warn' : 'status-ok';
+    statusSpan.textContent = message;
+    log.append(timestamp, statusSpan);
+    if (latency !== null) log.append(document.createTextNode(` · 200 OK · ${latency}ms`));
+    streamLogs.appendChild(log);
+    while (streamLogs.children.length > 8) streamLogs.removeChild(streamLogs.firstElementChild);
+    streamLogs.scrollTop = streamLogs.scrollHeight;
+  }
+  function updateMetrics() {
+    latest.gpu = Math.floor(35 + Math.random() * 20);
+    latest.cpu = Math.floor(20 + Math.random() * 18);
+    latest.latency = Math.floor(14 + Math.random() * 12);
+    latest.drift = (0.010 + Math.random() * 0.008).toFixed(3);
+    monGpuVal.textContent = `${latest.gpu}%`; monGpuBar.style.width = `${latest.gpu}%`;
+    monCpuVal.textContent = `${latest.cpu}%`; monCpuBar.style.width = `${latest.cpu}%`;
+    monLatVal.textContent = `${latest.latency} ms`; monLatBar.style.width = `${Math.min(100, latest.latency * 2)}%`;
+    monDriftVal.textContent = latest.drift; monDriftBar.style.width = `${Math.min(100, Number(latest.drift) * 1000)}%`;
+    addLog(`POST ${endpoints[Math.floor(Math.random() * endpoints.length)]}`, 'ok', `${latest.latency}.${Math.floor(Math.random()*9)}`);
+    $('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }
+  setInterval(updateMetrics, 2800);
+  $('triggerBurstBtn').addEventListener('click', () => {
+    latest.gpu=88; latest.cpu=74; latest.latency=68;
+    monGpuVal.textContent='88%'; monGpuBar.style.width='88%';
+    monCpuVal.textContent='74%'; monCpuBar.style.width='74%';
+    monLatVal.textContent='68 ms'; monLatBar.style.width='68%';
+    addLog('BURST DETECTED · Autoscaling 2 extra worker pods · Latency: 68.2ms','warn');
+    showToast('Traffic spike simulated — worker scaling event logged.');
+  });
+  $('refreshBtn').addEventListener('click', () => { updateMetrics(); showToast('Telemetry snapshot refreshed.'); });
+  $('clearLogsBtn').addEventListener('click', () => { streamLogs.replaceChildren(); showToast('Event stream cleared. New events will appear automatically.'); });
+  $('exportBtn').addEventListener('click', () => {
+    const snapshot = {generatedAt:new Date().toISOString(), environment:'production-like demo', metrics:latest};
+    const blob = new Blob([JSON.stringify(snapshot,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='pulseops-telemetry-snapshot.json'; a.click();
+    URL.revokeObjectURL(url); showToast('Telemetry snapshot exported as JSON.');
+  });
+  let toastTimer;
+  function showToast(message) {
+    const toast = $('toast'); toast.textContent = message; toast.style.display='block';
+    clearTimeout(toastTimer); toastTimer=setTimeout(()=>toast.style.display='none',3200);
+  }
+  document.querySelectorAll('.nav-link').forEach(link => link.addEventListener('click', () => {
+    document.querySelectorAll('.nav-link').forEach(item=>item.classList.remove('active'));
+    link.classList.add('active');
+  }));
+</script>
+</body>
+</html>
